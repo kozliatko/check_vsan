@@ -1,0 +1,12 @@
+0.91 - Tue Feb 13 11:55:40 CET 2018
+  - initial release
+
+
+0.92 - Mon Feb 26 15:52:34 CET 2018
+  - code cleanup
+  - changed TMPDIR to VSANTMPDIR 
+  - variables in {}
+  - dereference of variables in ""
+  - check existence of curl binary
+  - check existence of perl binary
+  - check network connection over proxy (wget response code 56)

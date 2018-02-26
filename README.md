@@ -18,25 +18,25 @@ __Usage: check_vsan.sh [-h | --help | -s server -u user -p password | --username
 Check VMWare VSAN status 
 
   **check_vsan.sh -h | --help**
-    print this help
+   print this help
 
   **check_vsan.sh -v | --verbose**
-     verbose output to logfile
+   verbose output to logfile
 
   **check_vsan.sh -n | --noclean**
-     do not delete temporary directory /tmp/vsan-*
+   do not delete temporary directory /tmp/vsan-*
 
   **check_vsan.sh -u | --username**
-     vcenter username (can be omitted if VCENTERUSERNAME is set)
+   vcenter username (can be omitted if VCENTERUSERNAME is set)
 
   **check_vsan.sh -p | --password**
-     vcenter password (can be omitted if VCENTERPASSWORD is set)
+   vcenter password (can be omitted if VCENTERPASSWORD is set)
 
   **check_vsan.sh -s | --server**
-     vcenter hostname (can be omitted if VCENTERSERVER is set)
+   vcenter hostname (can be omitted if VCENTERSERVER is set)
 
 --------------
 
 _If the plugin doesn't work, you have patches or want to suggest improvements
-send email to jan.vajda@gmail.com.
+you are [welcome](https://github.com/kozliatko/check_vsan/issues).
 Please include version information with all correspondence_

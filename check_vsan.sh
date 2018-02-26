@@ -4,40 +4,44 @@
 #
 # script to automate nagios check on vmware VSAN infrastructure
 #
-# Tue Feb 13 11:55:40 CET 2018
+# 0.91 - Tue Feb 13 11:55:40 CET 2018
+# 0.92 - Mon Feb 26 15:52:34 CET 2018
 #
 # (c) Jan ' Kozo ' Vajda <Jan.Vajda@gmail.com>
 #
 ########################################################################################
 
-PROGNAME=`basename $0`
-PROGPATH=`echo $0 | sed -e 's,[\\/][^\\/][^\\/]*$,,'`
+PROGNAME=$(basename $0)
+PROGPATH=$(echo $0 | sed -e 's,[\\/][^\\/][^\\/]*$,,')
 
-REVISION="0.91"
+CURL=$(which curl)|| { echo "There is no curl binary in path"; exit 1; }
+PERL=$(which perl)|| { echo "There is no perl binary in path"; exit 1; }
+
+REVISION="0.92"
 
 
 usage() { 
-  echo "Usage: $PROGNAME [-h | --help | -s server -u user -p password | --username user --password password --server server] [-v | --verbose ] [ -n | --noclean ]" 1>&2; 
+  echo "Usage: ${PROGNAME} [-h | --help | -s server -u user -p password | --username user --password password --server server] [-v | --verbose ] [ -n | --noclean ]" 1>&2; 
   echo "" 1>&2;
   echo "Check VMWare VSAN status " 1>&2;
-  echo "(Version: $PROGNAME $REVISION)" 1>&2;
+  echo "(Version: ${PROGNAME} ${REVISION})" 1>&2;
   echo "" 1>&2;
-  echo "  $PROGNAME -h | --help" 1>&2;
+  echo "  ${PROGNAME} -h | --help" 1>&2;
   echo "     print this help" 1>&2;
   echo "" 1>&2;
-  echo "  $PROGNAME -v | --verbose" 1>&2;
+  echo "  ${PROGNAME} -v | --verbose" 1>&2;
   echo "     verbose output to logfile" 1>&2;
   echo "" 1>&2;
-  echo "  $PROGNAME -n | --noclean" 1>&2;
+  echo "  ${PROGNAME} -n | --noclean" 1>&2;
   echo "     do not delete temporary directory /tmp/vsan-*" 1>&2;
   echo "" 1>&2;
-  echo "  $PROGNAME -u | --username" 1>&2;
+  echo "  ${PROGNAME} -u | --username" 1>&2;
   echo "     vcenter username (can be omitted if VCENTERUSERNAME is set)" 1>&2;
   echo "" 1>&2;
-  echo "  $PROGNAME -p | --password" 1>&2;
+  echo "  ${PROGNAME} -p | --password" 1>&2;
   echo "     vcenter password (can be omitted if VCENTERPASSWORD is set)" 1>&2;
   echo "" 1>&2;
-  echo "  $PROGNAME -s | --server" 1>&2;
+  echo "  ${PROGNAME} -s | --server" 1>&2;
   echo "     vcenter hostname (can be omitted if VCENTERSERVER is set)" 1>&2; 
   echo "" 1>&2;
   echo "" 1>&2;
@@ -51,21 +55,21 @@ usage() {
 
 ### conditional verbose output
 verbose () {
-  if [[ $VERBOSE == "-v" ]]; then
-    echo $@ >> $LOGFILE 2>&1
+  if [[ ${VERBOSE} == "-v" ]]; then
+    echo $@ >> ${LOGFILE} 2>&1
   fi
 }
 
 ### conditional cleanup of temporary directory after finish
 cleanup () {
-  if [ -z $CLEAN ] ; then
-    rm -rf $TMPDIR
+  if [ -z ${CLEAN} ] ; then
+    rm -rf ${VSANTMPDIR}
   fi
 }
 
-TEMP=`getopt -o :hvnu:p:s: --long help,verbose,noclean,username:,password:,server: -- "$@"`
+TEMP=$(getopt -o :hvnu:p:s: --long help,verbose,noclean,username:,password:,server: -- "$@")
 if [ $? != 0 ] ; then usage; fi
-eval set -- "$TEMP"
+eval set -- "${TEMP}"
 
 ### default
 VERBOSE="-s"
@@ -84,14 +88,14 @@ do
     esac
 done
 
-if [ -z $VCENTERUSERNAME ] || [ -z $VCENTERPASSWORD ] || [ -z $VCENTERSERVER ] ; then usage; fi
+if [ -z ${VCENTERUSERNAME} ] || [ -z ${VCENTERPASSWORD} ] || [ -z ${VCENTERSERVER} ] ; then usage; fi
 
-TMPDIR="$(mktemp -d -t vsan-XXXXXXXX )" || { echo "Failed to create temp directory"; exit 1; }
-COOKIES="$(mktemp $TMPDIR/cookies.XXXXXXXX)" || { echo "Failed to create temp file"; exit 1; }
-LOGFILE="$(mktemp $TMPDIR/logfile.XXXXXXXX)" || { echo "Failed to create temp file"; exit 1; }
+VSANTMPDIR="$(mktemp -d -t vsan-XXXXXXXX )" || { echo "Failed to create temp directory"; exit 1; }
+COOKIES="$(mktemp ${VSANTMPDIR}/cookies.XXXXXXXX)" || { echo "Failed to create temp file"; exit 1; }
+LOGFILE="$(mktemp ${VSANTMPDIR}/logfile.XXXXXXXX)" || { echo "Failed to create temp file"; exit 1; }
 
-    ENDPOINT="https://$VCENTERSERVER:443/sdk/vimService.wsdl"
-VSANENDPOINT="https://$VCENTERSERVER:443/vsanHealth"
+    ENDPOINT="https://${VCENTERSERVER}:443/sdk/vimService.wsdl"
+VSANENDPOINT="https://${VCENTERSERVER}:443/vsanHealth"
 
 
 
@@ -104,24 +108,24 @@ SOAP2=$(cat <<EOM
    <soapenv:Body>
    <Login xmlns="urn:vim25">
       <_this type="SessionManager">SessionManager</_this>
-	<userName>$VCENTERUSERNAME</userName>
-	<password>$VCENTERPASSWORD</password>
+	<userName>${VCENTERUSERNAME}</userName>
+	<password>${VCENTERPASSWORD}</password>
       </Login>
    </soapenv:Body>
    </soapenv:Envelope>
 EOM
 )
 
-verbose "SOAP2: $SOAP2"
-echo $SOAP2 | /usr/bin/curl $VERBOSE --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o $TMPDIR/response2.xml -b $COOKIES -c $COOKIES -X POST $ENDPOINT >> $LOGFILE 2>&1
+verbose "SOAP2: ${SOAP2}"
+echo ${SOAP2} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o ${VSANTMPDIR}/response2.xml -b ${COOKIES} -c ${COOKIES} -X POST $ENDPOINT >> ${LOGFILE} 2>&1
 
-if [[ $? == "6" || $? == "7" ]]; then
+if [[ $? == "6" || $? == "7" || $? == "56" ]]; then
   cleanup
-  echo "Cannot connect to $VCENTERSERVER"
+  echo "Cannot connect to ${VCENTERSERVER}"
   exit 1
 fi
 
-grep -q "incorrect user name or password" $TMPDIR/response2.xml && { cleanup; echo "Incorrect user name or password"; exit 1;}
+grep -q "incorrect user name or password" ${VSANTMPDIR}/response2.xml && { cleanup; echo "Incorrect user name or password"; exit 1;}
 
 ### get ClusterComputeResource
 SOAP3=$(cat <<EOM
@@ -235,11 +239,10 @@ SOAP3=$(cat <<EOM
 EOM
 )
 
-verbose "SOAP3: $SOAP3"
-echo $SOAP3 | /usr/bin/curl $VERBOSE --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o $TMPDIR/response3.xml -b $COOKIES -c $COOKIES -X POST $ENDPOINT >> $LOGFILE 2>&1
-#ID=`awk -F '[<>]' '/returnval/{print $7}' $TMPDIR/response3.xml`
-ID=`grep RetrievePropertiesResponse $TMPDIR/response3.xml | perl -pe 's/.*?<RetrievePropertiesResponse xmlns="urn:vim25"><returnval><obj type="ClusterComputeResource">([a-z0-9-]+)<\/obj>.*$/$1/'`
-verbose "This is ID: $ID"
+verbose "SOAP3: ${SOAP3}"
+echo ${SOAP3} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o ${VSANTMPDIR}/response3.xml -b ${COOKIES} -c ${COOKIES} -X POST $ENDPOINT >> ${LOGFILE} 2>&1
+ID=$(grep RetrievePropertiesResponse ${VSANTMPDIR}/response3.xml | ${PERL} -pe 's/.*?<RetrievePropertiesResponse xmlns="urn:vim25"><returnval><obj type="ClusterComputeResource">([a-z0-9-]+)<\/obj>.*$/$1/')
+verbose "This is ID: ${ID}"
 
 ### get health
 SOAP5=$(cat <<EOM
@@ -260,11 +263,11 @@ SOAP5=$(cat <<EOM
 EOM
 )
 
-verbose "SOAP5: $SOAP5"
-echo $SOAP5 | /usr/bin/curl $VERBOSE --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o $TMPDIR/response5.xml -b $COOKIES -c $COOKIES -X POST $VSANENDPOINT >> $LOGFILE 2>&1
-STATUS=`grep VsanQueryVcClusterHealthSummaryResponse $TMPDIR/response5.xml | perl -pe 's/.*?<VsanQueryVcClusterHealthSummaryResponse.*?<status>([a-z]+)<\/status>.*$/$1/'`
+verbose "SOAP5: ${SOAP5}"
+echo ${SOAP5} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o ${VSANTMPDIR}/response5.xml -b ${COOKIES} -c ${COOKIES} -X POST $VSANENDPOINT >> ${LOGFILE} 2>&1
+STATUS=$(grep VsanQueryVcClusterHealthSummaryResponse ${VSANTMPDIR}/response5.xml | ${PERL} -pe 's/.*?<VsanQueryVcClusterHealthSummaryResponse.*?<status>([a-z]+)<\/status>.*$/$1/')
 
-verbose "STATUS: $STATUS"
+verbose "STATUS: ${STATUS}"
 
 ### logout
 SOAP6=$(cat <<EOM
@@ -283,8 +286,8 @@ EOM
 )
 
 
-verbose "SOAP6: $SOAP6"
-echo $SOAP6 | /usr/bin/curl $VERBOSE --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o $TMPDIR/response6.xml -b $COOKIES -c $COOKIES -X POST $ENDPOINT >> $LOGFILE 2>&1
+verbose "SOAP6: ${SOAP6}"
+echo ${SOAP6} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o ${VSANTMPDIR}/response6.xml -b ${COOKIES} -c ${COOKIES} -X POST $ENDPOINT >> ${LOGFILE} 2>&1
 
 
 ### cleanup
@@ -292,10 +295,10 @@ cleanup
 
 
 ### mapping to nagios states
-case "$STATUS" in 
-  green) echo "OK - clusterStatus is $STATUS"; exit 0;;
-  yelow) echo "WARNING - clusterStatus is $STATUS"; exit 1;;
-  red) echo "CRITICAL - clusterStatus is $STATUS"; exit 2;;
-  *) echo "UNKNOWN - clusterStatus is $STATUS"; exit 3;;
+case "${STATUS}" in 
+  green) echo "OK - clusterStatus is ${STATUS}"; exit 0;;
+  yelow) echo "WARNING - clusterStatus is ${STATUS}"; exit 1;;
+  red) echo "CRITICAL - clusterStatus is ${STATUS}"; exit 2;;
+  *) echo "UNKNOWN - clusterStatus is ${STATUS}"; exit 3;;
 esac
 
