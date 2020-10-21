@@ -1,6 +1,9 @@
-0.91 - Tue Feb 13 11:55:40 CET 2018
-  - initial release
+1.01 - Wed Oct 21 11:20:00 CEST 2020
+  - check for multiple VSANs
+  - nagios state output changed
 
+0.93 - Tue Feb 27 11:43:14 CET 2018
+  - fix typos
 
 0.92 - Mon Feb 26 15:52:34 CET 2018
   - code cleanup
@@ -9,4 +12,7 @@
   - dereference of variables in ""
   - check existence of curl binary
   - check existence of perl binary
-  - check network connection over proxy (wget response code 56)
+  - check network connection over proxy (curl response code 56)
+
+0.91 - Tue Feb 13 11:55:40 CET 2018
+  - initial release

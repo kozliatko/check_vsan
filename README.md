@@ -5,8 +5,7 @@ This is a pure bash/curl/grep/perl plugin for _nagios_ to check health of VSAN
 clusters. It uses **no vmware SDK**, just pure unix tools.
 
 There is also [python implementation](https://github.com/markhamb/check_vsan)
-which uses [the VMware python
-SDK](https://www.vmware.com/support/developer/vapi/index.html), but it
+which uses [the VMware python SDK](https://www.vmware.com/support/developer/vapi/index.html), but it
 didn't work for me.
 
 This plugin can parse malformed XML response.

@@ -6,6 +6,7 @@
 #
 # 0.91 - Tue Feb 13 11:55:40 CET 2018
 # 0.92 - Mon Feb 26 15:52:34 CET 2018
+# 1.01 - Wed Oct 21 11:19:30 CEST 2020
 #
 # (c) Jan ' Kozo ' Vajda <Jan.Vajda@gmail.com>
 #
@@ -241,10 +242,19 @@ EOM
 
 verbose "SOAP3: ${SOAP3}"
 echo ${SOAP3} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o ${VSANTMPDIR}/response3.xml -b ${COOKIES} -c ${COOKIES} -X POST $ENDPOINT >> ${LOGFILE} 2>&1
-ID=$(grep RetrievePropertiesResponse ${VSANTMPDIR}/response3.xml | ${PERL} -pe 's/.*?<RetrievePropertiesResponse xmlns="urn:vim25"><returnval><obj type="ClusterComputeResource">([a-z0-9-]+)<\/obj>.*$/$1/')
+#ID=$(grep RetrievePropertiesResponse ${VSANTMPDIR}/response3.xml | ${PERL} -pe 's/.*?<RetrievePropertiesResponse xmlns="urn:vim25"><returnval><obj type="ClusterComputeResource">([a-z0-9-]+)<\/obj>.*$/$1/')
+  ID=`grep ClusterComputeResource ${VSANTMPDIR}/response3.xml | perl -pe 's!.*?<obj type="ClusterComputeResource">(.*?)</obj>.*?!$1 !g' | perl -pe 's/<.*$//' `
+NAME=`grep ClusterComputeResource ${VSANTMPDIR}/response3.xml | perl -pe 's!.*?<val xsi:type="xsd:string">(.*?)</val>.*?!$1,!g'| perl -pe 's/<.*$//'`
+
 verbose "This is ID: ${ID}"
+verbose "This is NAME: ${NAME}"
 
 ### get health
+ARRAYID=(${ID})
+IFS="," read -a ARRAYNAME <<< ${NAME}
+
+for id in "${ARRAYID[@]}"; do
+
 SOAP5=$(cat <<EOM
 <?xml version="1.0" encoding="UTF-8"?>
    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -253,7 +263,7 @@ SOAP5=$(cat <<EOM
    <soapenv:Body>
 <VsanQueryVcClusterHealthSummary xmlns="urn:vim25">
   <_this type="VsanVcClusterHealthSystem">vsan-cluster-health-system</_this>
-  <cluster type="ClusterComputeResource">$ID</cluster>
+  <cluster type="ClusterComputeResource">$id</cluster>
   <includeObjUuids>false</includeObjUuids>
   <fetchFromCache>false</fetchFromCache>
 </VsanQueryVcClusterHealthSummary>
@@ -268,6 +278,12 @@ echo ${SOAP5} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header
 STATUS=$(grep VsanQueryVcClusterHealthSummaryResponse ${VSANTMPDIR}/response5.xml | ${PERL} -pe 's/.*?<VsanQueryVcClusterHealthSummaryResponse.*?<status>([a-z]+)<\/status>.*$/$1/')
 
 verbose "STATUS: ${STATUS}"
+
+EXITSTAT="${EXITSTAT}${STATUS} "
+
+done
+
+verbose "EXITSTAT: ${EXITSTAT}"
 
 ### logout
 SOAP6=$(cat <<EOM
@@ -294,11 +310,26 @@ echo ${SOAP6} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header
 cleanup
 
 
+ARRAYSTATUS=(${EXITSTAT})
+
+i=0
+OUT=""
+
+### counting states
+for id in "${ARRAYID[@]}"; do
+ OUT="${OUT}${ARRAYNAME[$i]} (${ARRAYID[$i]}): ${ARRAYSTATUS[$i]}, "
+ ((${ARRAYSTATUS[$i]}++))
+ ((i++))
+done
+
 ### mapping to nagios states
-case "${STATUS}" in 
-  green) echo "OK - clusterStatus is ${STATUS}"; exit 0;;
-  yelow) echo "WARNING - clusterStatus is ${STATUS}"; exit 1;;
-  red) echo "CRITICAL - clusterStatus is ${STATUS}"; exit 2;;
-  *) echo "UNKNOWN - clusterStatus is ${STATUS}"; exit 3;;
-esac
+if [ ! -z ${red} ]
+then
+  echo "CRITICAL - clusterStatus is red: ${OUT}"; exit 2
+elif [ ! -z ${yellow} ]
+then
+  echo "WARNING - clusterStatus is yellow: ${OUT}"; exit 1
+else
+  echo "OK - clusterStatus is green: ${OUT}"; exit 0
+fi
 
