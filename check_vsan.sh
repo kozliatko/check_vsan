@@ -7,6 +7,7 @@
 # 0.91 - Tue Feb 13 11:55:40 CET 2018
 # 0.92 - Mon Feb 26 15:52:34 CET 2018
 # 1.01 - Wed Oct 21 11:19:30 CEST 2020
+# 1.02 - Fri Oct 23 12:30:41 CEST 2020
 #
 # (c) Jan ' Kozo ' Vajda <Jan.Vajda@gmail.com>
 #
@@ -18,7 +19,7 @@ PROGPATH=$(echo $0 | sed -e 's,[\\/][^\\/][^\\/]*$,,')
 CURL=$(which curl)|| { echo "There is no curl binary in path"; exit 1; }
 PERL=$(which perl)|| { echo "There is no perl binary in path"; exit 1; }
 
-REVISION="0.92"
+REVISION="1.02"
 
 
 usage() { 
@@ -274,8 +275,8 @@ EOM
 )
 
 verbose "SOAP5: ${SOAP5}"
-echo ${SOAP5} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o ${VSANTMPDIR}/response5.xml -b ${COOKIES} -c ${COOKIES} -X POST $VSANENDPOINT >> ${LOGFILE} 2>&1
-STATUS=$(grep VsanQueryVcClusterHealthSummaryResponse ${VSANTMPDIR}/response5.xml | ${PERL} -pe 's/.*?<VsanQueryVcClusterHealthSummaryResponse.*?<status>([a-z]+)<\/status>.*$/$1/')
+echo ${SOAP5} | ${CURL} ${VERBOSE} --header 'SOAPAction: urn:vim25/6.5' --header 'Content-Type: text/xml' -k -d @- -o ${VSANTMPDIR}/response5.xml.${id} -b ${COOKIES} -c ${COOKIES} -X POST $VSANENDPOINT >> ${LOGFILE} 2>&1
+STATUS=$(grep VsanQueryVcClusterHealthSummaryResponse ${VSANTMPDIR}/response5.xml.${id} | ${PERL} -pe 's/.*?<VsanQueryVcClusterHealthSummaryResponse.*?<status>([a-z]+)<\/status>.*$/$1/')
 
 verbose "STATUS: ${STATUS}"
 

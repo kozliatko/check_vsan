@@ -1,3 +1,6 @@
+1.02 - Fri Oct 23 12:30:41 CEST 2020
+  - better logging of XML files
+
 1.01 - Wed Oct 21 11:20:00 CEST 2020
   - check for multiple VSANs
   - nagios state output changed
