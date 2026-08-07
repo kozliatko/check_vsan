@@ -1,0 +1,12 @@
+title = "gitleaks konfigurácia — secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholdery, príklady a testovacie fixtures"
+paths = [
+  '''\\.env\\.example$''',
+  '''\\.env\\.sample$''',
+  '''(^|/)tests?/''',
+]
