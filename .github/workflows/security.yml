@@ -1,0 +1,30 @@
+name: Security — kontrola citlivých dát
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  gitleaks:
+    name: Gitleaks — sken tajomstiev v kóde a git histórii
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (plná história)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Spusti gitleaks
+        run: |
+          docker run --rm \
+            -v "$(pwd)":/repo \
+            zricethezav/gitleaks:latest \
+            detect \
+              --source=/repo \
+              --config=/repo/.gitleaks.toml \
+              --verbose \
+              --redact \
+              --exit-code 1
