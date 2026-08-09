@@ -58,7 +58,7 @@ usage() {
 ### conditional verbose output
 verbose () {
   if [[ ${VERBOSE} == "-v" ]]; then
-    echo $@ >> ${LOGFILE} 2>&1
+    echo "$@" >> "${LOGFILE}" 2>&1
   fi
 }
 
