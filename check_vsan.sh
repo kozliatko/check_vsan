@@ -8,6 +8,7 @@
 # 0.92 - Mon Feb 26 15:52:34 CET 2018
 # 1.01 - Wed Oct 21 11:19:30 CEST 2020
 # 1.02 - Fri Oct 23 12:30:41 CEST 2020
+# 1.03 - added -c/--cluster to limit the check to a single named cluster
 #
 # (c) Jan ' Kozo ' Vajda <Jan.Vajda@gmail.com>
 #
@@ -19,11 +20,11 @@ PROGPATH=$(echo $0 | sed -e 's,[\\/][^\\/][^\\/]*$,,')
 CURL=$(which curl)|| { echo "There is no curl binary in path"; exit 1; }
 PERL=$(which perl)|| { echo "There is no perl binary in path"; exit 1; }
 
-REVISION="1.02"
+REVISION="1.03"
 
 
 usage() { 
-  echo "Usage: ${PROGNAME} [-h | --help | -s server -u user -p password | --username user --password password --server server] [-v | --verbose ] [ -n | --noclean ]" 1>&2; 
+  echo "Usage: ${PROGNAME} [-h | --help | -s server -u user -p password | --username user --password password --server server] [-c cluster | --cluster cluster] [-v | --verbose ] [ -n | --noclean ]" 1>&2;
   echo "" 1>&2;
   echo "Check VMWare VSAN status " 1>&2;
   echo "(Version: ${PROGNAME} ${REVISION})" 1>&2;
@@ -44,7 +45,10 @@ usage() {
   echo "     vcenter password (can be omitted if VCENTERPASSWORD is set)" 1>&2;
   echo "" 1>&2;
   echo "  ${PROGNAME} -s | --server" 1>&2;
-  echo "     vcenter hostname (can be omitted if VCENTERSERVER is set)" 1>&2; 
+  echo "     vcenter hostname (can be omitted if VCENTERSERVER is set)" 1>&2;
+  echo "" 1>&2;
+  echo "  ${PROGNAME} -c | --cluster" 1>&2;
+  echo "     limit check to a single cluster by exact name (optional; default = all VSAN clusters)" 1>&2;
   echo "" 1>&2;
   echo "" 1>&2;
   echo "" 1>&2;
@@ -69,7 +73,7 @@ cleanup () {
   fi
 }
 
-TEMP=$(getopt -o :hvnu:p:s: --long help,verbose,noclean,username:,password:,server: -- "$@")
+TEMP=$(getopt -o :hvnu:p:s:c: --long help,verbose,noclean,username:,password:,server:,cluster: -- "$@")
 if [ $? != 0 ] ; then usage; fi
 eval set -- "${TEMP}"
 
@@ -83,6 +87,7 @@ do
         -u | --username ) VCENTERUSERNAME="$2"; shift 2;;
         -p | --password )  VCENTERPASSWORD="$2"; shift 2;;
         -s | --server ) VCENTERSERVER=$2; shift 2;;
+        -c | --cluster ) CLUSTERFILTER="$2"; shift 2;;
         -v | --verbose ) VERBOSE="-v"; shift ;;
         -n | --noclean ) CLEAN="no"; shift ;;
         -h | --help ) usage; exit;;
@@ -253,6 +258,25 @@ verbose "This is NAME: ${NAME}"
 ### get health
 ARRAYID=(${ID})
 IFS="," read -a ARRAYNAME <<< ${NAME}
+
+### -c/--cluster: limit to a single cluster with an exact name match
+if [ -n "${CLUSTERFILTER}" ]; then
+  FILTEREDID=()
+  FILTEREDNAME=()
+  for i in "${!ARRAYNAME[@]}"; do
+    if [ "${ARRAYNAME[$i]}" == "${CLUSTERFILTER}" ]; then
+      FILTEREDID+=("${ARRAYID[$i]}")
+      FILTEREDNAME+=("${ARRAYNAME[$i]}")
+    fi
+  done
+  if [ ${#FILTEREDID[@]} -eq 0 ]; then
+    cleanup
+    echo "UNKNOWN - cluster '${CLUSTERFILTER}' not found. Available clusters: ${ARRAYNAME[*]}"
+    exit 3
+  fi
+  ARRAYID=("${FILTEREDID[@]}")
+  ARRAYNAME=("${FILTEREDNAME[@]}")
+fi
 
 for id in "${ARRAYID[@]}"; do
 
